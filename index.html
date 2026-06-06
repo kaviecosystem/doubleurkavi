@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DoubleUrStack — Double Your KAVI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111520;
+    --surface2: #161b26;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --amber: #f0a500;
+    --amber-dim: #7a5200;
+    --amber-glow: rgba(240,165,0,0.15);
+    --teal: #00d4aa;
+    --teal-dim: #004d3e;
+    --teal-glow: rgba(0,212,170,0.12);
+    --red: #f05050;
+    --red-dim: rgba(240,80,80,0.12);
+    --text: #e8e8e8;
+    --text2: #8892a4;
+    --text3: #535e72;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Sora', sans-serif;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height:100vh; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width:4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius:4px; }
+
+  /* ── HEADER ── */
+  header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 2rem; height:64px;
+    border-bottom: 1px solid var(--border);
+    position:sticky; top:0; z-index:100;
+    background: rgba(10,12,16,0.92); backdrop-filter:blur(12px);
+  }
+  .logo { display:flex; align-items:center; gap:10px; }
+  .logo-mark {
+    width:32px; height:32px; border-radius:8px;
+    background: linear-gradient(135deg, var(--amber) 0%, #ff6b00 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:13px; color:#000;
+  }
+  .logo-text { font-family:var(--mono); font-weight:700; font-size:16px; letter-spacing:-0.5px; }
+  .logo-text span { color: var(--amber); }
+
+  .header-right { display:flex; align-items:center; gap:12px; }
+  .price-pill {
+    display:flex; align-items:center; gap:6px;
+    background: var(--surface); border:1px solid var(--border);
+    border-radius:20px; padding:5px 12px;
+    font-family:var(--mono); font-size:12px; color:var(--teal);
+  }
+  .price-dot { width:6px; height:6px; border-radius:50%; background:var(--teal); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+  #connectBtn {
+    padding:8px 18px; border-radius:20px; border:1px solid var(--amber);
+    background:transparent; color:var(--amber); font-family:var(--mono); font-size:12px;
+    cursor:pointer; transition:all 0.2s; letter-spacing:0.5px;
+  }
+  #connectBtn:hover { background:var(--amber-glow); }
+  #connectBtn.connected { border-color:var(--teal); color:var(--teal); }
+  #connectBtn.connected:hover { background:var(--teal-glow); }
+
+  /* ── LAYOUT ── */
+  .app { max-width:1100px; margin:0 auto; padding:2rem 1.5rem; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display:grid; grid-template-columns:repeat(5,1fr); gap:1px;
+    background:var(--border); border:1px solid var(--border);
+    border-radius:var(--radius); overflow:hidden; margin-bottom:2rem;
+  }
+  .stat-cell {
+    background:var(--surface); padding:1.25rem 1.5rem;
+  }
+  .stat-label { font-size:11px; color:var(--text3); letter-spacing:0.8px; text-transform:uppercase; font-family:var(--mono); margin-bottom:6px; }
+  .stat-val { font-family:var(--mono); font-size:20px; font-weight:700; color:var(--text); }
+  .stat-val.amber { color:var(--amber); }
+  .stat-val.teal  { color:var(--teal); }
+
+  /* ── TABS ── */
+  .tabs { display:flex; gap:2px; margin-bottom:1.5rem; background:var(--surface); padding:4px; border-radius:var(--radius-sm); border:1px solid var(--border); width:fit-content; }
+  .tab {
+    padding:8px 20px; border-radius:6px; font-size:13px; font-family:var(--mono);
+    cursor:pointer; color:var(--text2); border:none; background:transparent; transition:all 0.18s;
+  }
+  .tab:hover { color:var(--text); }
+  .tab.active { background:var(--surface2); color:var(--amber); border:1px solid var(--border); }
+
+  /* ── PANELS ── */
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  /* ── GRID ── */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+
+  /* ── CARD ── */
+  .card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:1.5rem;
+  }
+  .card-title {
+    font-size:11px; font-family:var(--mono); color:var(--text3); text-transform:uppercase;
+    letter-spacing:0.8px; margin-bottom:1.25rem; display:flex; align-items:center; gap:8px;
+  }
+  .card-title::before { content:''; display:block; width:3px; height:12px; background:var(--amber); border-radius:2px; }
+
+  /* ── FORM ── */
+  .field { margin-bottom:1.25rem; }
+  .field label { display:block; font-size:12px; color:var(--text2); margin-bottom:6px; font-family:var(--mono); }
+  .input-wrap { position:relative; }
+  .input-wrap input {
+    width:100%; background:var(--surface2); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:11px 80px 11px 14px;
+    color:var(--text); font-family:var(--mono); font-size:14px; outline:none;
+    transition: border-color 0.18s;
+  }
+  .input-wrap input:focus { border-color:var(--amber); }
+  .input-wrap input::placeholder { color:var(--text3); }
+  .input-tag {
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    font-family:var(--mono); font-size:11px; color:var(--amber);
+    background:var(--amber-glow); padding:3px 8px; border-radius:4px;
+  }
+  .input-wrap input.full { padding-right:14px; }
+
+  .max-btn {
+    position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    font-family:var(--mono); font-size:11px; color:var(--teal);
+    background:var(--teal-glow); padding:3px 8px; border-radius:4px;
+    border:none; cursor:pointer; transition:opacity 0.15s;
+  }
+  .max-btn:hover { opacity:0.7; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    width:100%; padding:13px; border-radius:var(--radius-sm);
+    font-family:var(--mono); font-size:13px; font-weight:700;
+    cursor:pointer; transition:all 0.18s; border:none; letter-spacing:0.5px;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--amber) 0%, #ff7b00 100%);
+    color:#000;
+  }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 20px var(--amber-glow); }
+  .btn-primary:active { transform:translateY(0); }
+  .btn-primary:disabled { opacity:0.4; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-outline {
+    background:transparent; border:1px solid var(--border2);
+    color:var(--text2); font-size:12px;
+  }
+  .btn-outline:hover { border-color:var(--teal); color:var(--teal); background:var(--teal-glow); }
+
+  /* ── INFO BOX ── */
+  .info-box {
+    background:var(--amber-glow); border:1px solid rgba(240,165,0,0.2);
+    border-radius:var(--radius-sm); padding:12px 14px; font-size:12px;
+    color:var(--amber); font-family:var(--mono); line-height:1.6; margin-bottom:1.25rem;
+  }
+  .info-box.teal { background:var(--teal-glow); border-color:rgba(0,212,170,0.2); color:var(--teal); }
+  .info-box.red  { background:var(--red-dim); border-color:rgba(240,80,80,0.2); color:var(--red); }
+
+  /* ── PAYOUT PREVIEW ── */
+  .payout-row {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 0; border-bottom:1px solid var(--border); font-size:13px;
+  }
+  .payout-row:last-child { border-bottom:none; }
+  .payout-row .label { color:var(--text2); font-family:var(--mono); font-size:11px; }
+  .payout-row .value { font-family:var(--mono); color:var(--text); }
+  .payout-row .value.green { color:var(--teal); }
+  .payout-row .value.amber { color:var(--amber); }
+
+  /* ── DEPOSIT CARDS ── */
+  .deposit-list { display:flex; flex-direction:column; gap:1rem; }
+  .deposit-item {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:1.25rem; transition:border-color 0.2s;
+  }
+  .deposit-item:hover { border-color:var(--border2); }
+  .deposit-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
+  .deposit-id { font-family:var(--mono); font-size:12px; color:var(--text3); }
+  .deposit-status {
+    font-family:var(--mono); font-size:11px; padding:3px 10px; border-radius:10px;
+  }
+  .status-active { background:var(--teal-glow); color:var(--teal); border:1px solid rgba(0,212,170,0.2); }
+  .status-done   { background:rgba(83,94,114,0.2); color:var(--text3); border:1px solid var(--border); }
+  .status-ready  { background:var(--amber-glow); color:var(--amber); border:1px solid rgba(240,165,0,0.2); }
+
+  .deposit-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:1rem; }
+  .d-stat { background:var(--surface2); border-radius:var(--radius-sm); padding:10px 12px; }
+  .d-stat-label { font-size:10px; color:var(--text3); font-family:var(--mono); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+  .d-stat-val { font-family:var(--mono); font-size:14px; color:var(--text); }
+
+  .progress-bar { height:4px; background:var(--surface2); border-radius:2px; overflow:hidden; margin-bottom:12px; }
+  .progress-fill { height:100%; background:linear-gradient(90deg, var(--teal), var(--amber)); border-radius:2px; transition:width 0.5s ease; }
+
+  /* ── COUNTDOWN ── */
+  .countdown { font-family:var(--mono); font-size:11px; color:var(--text3); }
+  .countdown span { color:var(--amber); }
+
+  /* ── REFERRAL ── */
+  .referral-link-box {
+    background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm);
+    padding:12px 14px; display:flex; justify-content:space-between; align-items:center; gap:8px;
+  }
+  .referral-link-text { font-family:var(--mono); font-size:11px; color:var(--text2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .copy-btn {
+    flex-shrink:0; background:transparent; border:1px solid var(--border); border-radius:6px;
+    padding:5px 10px; font-family:var(--mono); font-size:11px; color:var(--text2);
+    cursor:pointer; transition:all 0.15s;
+  }
+  .copy-btn:hover { border-color:var(--teal); color:var(--teal); }
+  .copy-btn.copied { border-color:var(--teal); color:var(--teal); }
+
+  /* ── HOW IT WORKS ── */
+  .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+  .step { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:1.25rem; }
+  .step-num { font-family:var(--mono); font-size:10px; color:var(--amber); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px; }
+  .step-title { font-size:14px; font-weight:600; margin-bottom:6px; }
+  .step-desc { font-size:12px; color:var(--text2); line-height:1.6; }
+
+  /* ── TOAST ── */
+  #toast {
+    position:fixed; bottom:24px; right:24px; z-index:999;
+    background:var(--surface); border:1px solid var(--border2);
+    border-radius:var(--radius-sm); padding:12px 18px;
+    font-family:var(--mono); font-size:12px; color:var(--text);
+    transform:translateY(100px); opacity:0; transition:all 0.25s;
+    max-width:320px;
+  }
+  #toast.show { transform:translateY(0); opacity:1; }
+  #toast.success { border-color:rgba(0,212,170,0.4); }
+  #toast.error   { border-color:rgba(240,80,80,0.4); }
+
+  /* ── WALLET PROMPT ── */
+  .wallet-prompt {
+    text-align:center; padding:4rem 2rem; color:var(--text3);
+    font-family:var(--mono); font-size:13px; line-height:2;
+  }
+  .wallet-prompt h3 { font-size:16px; color:var(--text2); margin-bottom:8px; }
+
+  /* ── LOADING ── */
+  .spinner {
+    width:16px; height:16px; border:2px solid rgba(255,255,255,0.15);
+    border-top-color:var(--amber); border-radius:50%; animation:spin 0.6s linear infinite;
+    display:inline-block; vertical-align:middle; margin-right:6px;
+  }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ── MOBILE ── */
+  @media(max-width:700px) {
+    .grid-2 { grid-template-columns:1fr; }
+    .stats-bar { grid-template-columns:repeat(2,1fr); }
+    .steps { grid-template-columns:1fr; }
+    .deposit-grid { grid-template-columns:1fr 1fr; }
+    header { padding:0 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">2x</div>
+    <div class="logo-text">Double<span>Ur</span>Stack</div>
+  </div>
+  <div class="header-right">
+    <div class="price-pill">
+      <div class="price-dot"></div>
+      <span id="headerPrice">KAVI: — USDT</span>
+    </div>
+    <button id="connectBtn" onclick="connectWallet()">Connect Wallet</button>
+  </div>
+</header>
+
+<div class="app">
+
+  <!-- STATS BAR -->
+  <div class="stats-bar">
+    <div class="stat-cell">
+      <div class="stat-label">KAVI Price</div>
+      <div class="stat-val amber" id="kaviPrice">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Vault Balance</div>
+      <div class="stat-val" id="vaultBal">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">My Deposits</div>
+      <div class="stat-val teal" id="myDeposits">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Referral Earned</div>
+      <div class="stat-val" id="refEarned">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">My KAVI Balance</div>
+      <div class="stat-val teal" id="myKaviBalance">—</div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('deposit')">Deposit</button>
+    <button class="tab" onclick="switchTab('claims')">My Claims</button>
+    <button class="tab" onclick="switchTab('referral')">Referral</button>
+    <button class="tab" onclick="switchTab('about')">How It Works</button>
+    <button class="tab" id="adminTab" onclick="switchTab('admin')" style="display:none; color:var(--red); border-color:rgba(240,80,80,0.3);">⚙ Admin</button>
+  </div>
+
+  <!-- ══════════════════════════════════ DEPOSIT TAB ══════════════════════════════════ -->
+  <div id="tab-deposit" class="panel active">
+    <div class="grid-2">
+      <!-- LEFT: FORM -->
+      <div class="card">
+        <div class="card-title">New Deposit</div>
+
+        <div class="field">
+          <label>Deposit Amount</label>
+          <div class="input-wrap">
+            <input type="number" id="depositAmt" placeholder="Min. 100 KAVI" oninput="updatePreview()" />
+            <button class="max-btn" onclick="setMaxDeposit()" id="maxDepBtn" style="display:none;">MAX</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Referrer Address <span style="color:var(--text3)">(optional)</span></label>
+          <div class="input-wrap">
+            <input type="text" id="referrerAddr" placeholder="0x..." class="full" />
+          </div>
+        </div>
+
+        <div class="info-box" id="claimWindowInfo">
+          ⏳ First claim opens after <strong id="firstClaimDays">~30</strong> days from deposit.
+          Subsequent claims unlock every 30 days.
+        </div>
+
+        <button class="btn btn-primary" id="depositBtn" onclick="doDeposit()" disabled>
+          Connect Wallet to Deposit
+        </button>
+      </div>
+
+      <!-- RIGHT: PREVIEW -->
+      <div class="card">
+        <div class="card-title">Payout Preview</div>
+
+        <div id="previewEmpty" style="color:var(--text3); font-size:12px; font-family:var(--mono); text-align:center; padding:2rem 0;">
+          Enter an amount to see your projected returns
+        </div>
+
+        <div id="previewContent" style="display:none;">
+          <div class="payout-row">
+            <span class="label">Gross Deposit</span>
+            <span class="value" id="prev-gross">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Deposit Fee (5%)</span>
+            <span class="value" id="prev-fee">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Referral Fee (5%)</span>
+            <span class="value" id="prev-reffee">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Net Staked</span>
+            <span class="value amber" id="prev-net">—</span>
+          </div>
+          <div style="margin:16px 0; height:1px; background:var(--border);"></div>
+          <div class="payout-row">
+            <span class="label">Max Total Return (2×)</span>
+            <span class="value green" id="prev-total">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Per Month (@ current price)</span>
+            <span class="value green" id="prev-monthly">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Per Month Net (−5% fee)</span>
+            <span class="value" id="prev-monthlynetsub">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Duration</span>
+            <span class="value">40 months</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Est. USD Value @ Current Price</span>
+            <span class="value amber" id="prev-usd">—</span>
+          </div>
+          <div style="margin-top:16px;" class="info-box" id="priceProtectNote">
+            ℹ️ Payout = lower of fixed KAVI quantity vs USD-value-equivalent. If price rises, you receive fewer KAVI (same USD). If price falls, you receive fixed KAVI quantity (lower USD).
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════ CLAIMS TAB ══════════════════════════════════ -->
+  <div id="tab-claims" class="panel">
+    <div id="claimsWalletPrompt" class="wallet-prompt">
+      <h3>Connect Your Wallet</h3>
+      Connect to view your deposits and claim monthly rewards.
+    </div>
+    <div id="claimsList" class="deposit-list" style="display:none;"></div>
+    <div id="claimsEmpty" style="display:none;" class="wallet-prompt">
+      <h3>No Deposits Yet</h3>
+      Go to the Deposit tab to start earning 2× returns.
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════ REFERRAL TAB ══════════════════════════════════ -->
+  <div id="tab-referral" class="panel">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Your Referral Link</div>
+        <div id="refWalletPrompt" class="wallet-prompt" style="padding:1.5rem 0;">
+          <h3>Connect Wallet</h3>Connect to get your referral link.
+        </div>
+        <div id="refContent" style="display:none;">
+          <div class="info-box teal" style="margin-bottom:1rem;">
+            You earn 5% of every deposit made by wallets you refer — paid instantly in KAVI.
+          </div>
+          <div class="field">
+            <label>Your referral link</label>
+            <div class="referral-link-box">
+              <span class="referral-link-text" id="refLinkText">—</span>
+              <button class="copy-btn" id="copyRefBtn" onclick="copyRef()">Copy</button>
+            </div>
+          </div>
+          <div class="payout-row" style="margin-top:1rem;">
+            <span class="label">Total Referral Earned</span>
+            <span class="value amber" id="ref-earned">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Total You've Deposited</span>
+            <span class="value" id="ref-deposited">—</span>
+          </div>
+          <div class="payout-row">
+            <span class="label">Referral Eligible</span>
+            <span class="value" id="ref-eligible">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Referral Program Rules</div>
+        <div style="font-size:12px; color:var(--text2); line-height:2; font-family:var(--mono);">
+          <div class="payout-row"><span class="label">Commission Rate</span><span class="value amber">5% of deposit</span></div>
+          <div class="payout-row"><span class="label">Min. Eligibility</span><span class="value">25,000 KAVI deposited</span></div>
+          <div class="payout-row"><span class="label">Payment Timing</span><span class="value">Instant on deposit</span></div>
+          <div class="payout-row"><span class="label">Payment Token</span><span class="value">KAVI</span></div>
+          <div class="payout-row"><span class="label">Referrer Lock-in</span><span class="value">First deposit only</span></div>
+        </div>
+        <div class="info-box" style="margin-top:1.25rem;">
+          💡 Your upline is set permanently on your first deposit. Make sure to use the right referral link.
+        </div>
+        <div class="field" style="margin-top:1rem;">
+          <label>Check referral info for address</label>
+          <div class="input-wrap" style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="checkRefAddr" placeholder="0x..." class="full" style="flex:1;" />
+          </div>
+          <button class="btn btn-outline" style="margin-top:8px;" onclick="checkRefInfo()">Check Info ↗</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════ ABOUT TAB ══════════════════════════════════ -->
+  <div id="tab-about" class="panel">
+    <div class="steps" style="margin-bottom:1.5rem;">
+      <div class="step">
+        <div class="step-num">Step 01</div>
+        <div class="step-title">Deposit KAVI</div>
+        <div class="step-desc">Approve & send any KAVI amount. 5% goes as a deposit fee, 5% to your referrer (or fee wallet). The rest is your net staked principal.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 02</div>
+        <div class="step-title">Wait for Windows</div>
+        <div class="step-desc">Your first claim window opens after 30 + days-since-deploy days. After that, every 30 days a new window opens for 40 months total.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">Step 03</div>
+        <div class="step-title">Claim Monthly</div>
+        <div class="step-desc">Each month pays 1/40th of 2× your net deposit. The contract picks the lower of: fixed KAVI quantity or USD-value-equivalent KAVI at current price.</div>
+      </div>
+    </div>
+
+    <div class="grid-2" style="margin-bottom:1.5rem;">
+      <div class="card">
+        <div class="card-title">Payout Calculation</div>
+        <div style="font-size:12px; color:var(--text2); line-height:1.9; font-family:var(--mono);">
+          <p>Every claim, the contract picks the <span style="color:var(--red)">lower</span> of two options:</p>
+          <br>
+          <p><span style="color:var(--amber)">Option A — Quantity:</span> 2 × net / 40 months in KAVI</p>
+          <br>
+          <p><span style="color:var(--teal)">Option B — Value:</span> (2 × net × deposit_price / current_price) / 40</p>
+          <br>
+          <p>If KAVI price <span style="color:var(--teal)">rises</span> → Option B wins (fewer KAVI, same USD value as at deposit time).</p>
+          <br>
+          <p>If KAVI price <span style="color:var(--red)">falls</span> → Option A wins (fixed KAVI quantity, lower USD value).</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Key Contract Details</div>
+        <div class="payout-row"><span class="label">Contract</span><span class="value" style="font-size:11px; color:var(--teal);">0x0159…C13</span></div>
+        <div class="payout-row"><span class="label">Network</span><span class="value">BNB Smart Chain</span></div>
+        <div class="payout-row"><span class="label">Duration</span><span class="value">40 months / deposit</span></div>
+        <div class="payout-row"><span class="label">Total Return</span><span class="value amber">Up to 2× net deposited</span></div>
+        <div class="payout-row"><span class="label">Deposit Fee</span><span class="value">5%</span></div>
+        <div class="payout-row"><span class="label">Claim Fee</span><span class="value">5%</span></div>
+        <div class="payout-row"><span class="label">Referral Bonus</span><span class="value">5% of deposit</span></div>
+        <div class="payout-row"><span class="label">Price Source</span><span class="value">PancakeSwap Pair</span></div>
+        <div style="margin-top:1rem;">
+          <a href="https://bscscan.com/address/0x015916Ed713396D06ABe1137986CC7d2B8E2eC13" target="_blank"
+             style="font-family:var(--mono); font-size:11px; color:var(--amber); text-decoration:none; display:flex; align-items:center; gap:6px;">
+            View on BscScan ↗
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════ ADMIN TAB ══════════════════════════════════ -->
+  <div id="tab-admin" class="panel">
+    <div class="info-box red" style="margin-bottom:1.5rem;">
+      🔐 Admin Panel — Only visible to the contract owner. Actions here are irreversible.
+    </div>
+
+    <div class="grid-2" style="margin-bottom:1.5rem;">
+
+      <!-- VAULT STATS -->
+      <div class="card">
+        <div class="card-title" style="--amber:var(--red);">Vault Overview</div>
+        <div class="payout-row">
+          <span class="label">Vault Balance</span>
+          <span class="value teal" id="adm-vaultBal">—</span>
+        </div>
+        <div class="payout-row">
+          <span class="label">Admin Funded Total</span>
+          <span class="value" id="adm-fundedTotal">—</span>
+        </div>
+        <div class="payout-row">
+          <span class="label">KAVI Price</span>
+          <span class="value amber" id="adm-price">—</span>
+        </div>
+        <div class="payout-row">
+          <span class="label">Days Since Deploy</span>
+          <span class="value" id="adm-days">—</span>
+        </div>
+        <div class="payout-row">
+          <span class="label">Fee Wallet</span>
+          <span class="value" style="font-size:10px; color:var(--text2);" id="adm-feeWallet">—</span>
+        </div>
+        <button class="btn btn-outline" style="margin-top:1rem;" onclick="loadAdminStats()">↻ Refresh</button>
+      </div>
+
+      <!-- FUND REWARD POOL -->
+      <div class="card">
+        <div class="card-title" style="--amber:var(--red);">Fund Reward Pool</div>
+        <div class="info-box" style="margin-bottom:1rem; font-size:11px;">
+          Deposited KAVI yahan se users ko monthly claims mein milta hai. Fund karne se pehle approve hoga.
+        </div>
+        <div class="field">
+          <label>Amount to Fund</label>
+          <div class="input-wrap">
+            <input type="number" id="fundAmt" placeholder="e.g. 100000" />
+            <button class="max-btn" onclick="setMaxFund()">MAX</button>
+          </div>
+        </div>
+        <div class="payout-row" style="margin-bottom:1rem;">
+          <span class="label">Your KAVI Balance</span>
+          <span class="value teal" id="adm-myBal">—</span>
+        </div>
+        <button class="btn btn-primary" id="fundBtn" onclick="doFund()"
+          style="background:linear-gradient(135deg,#f05050,#a00000);">
+          Approve & Fund Pool
+        </button>
+      </div>
+    </div>
+
+    <!-- EMERGENCY WITHDRAW -->
+    <div class="card" style="border-color:rgba(240,80,80,0.3);">
+      <div class="card-title" style="--amber:var(--red);">Emergency Withdraw</div>
+      <div class="info-box red" style="margin-bottom:1rem; font-size:11px;">
+        ⚠️ Sirf <strong>adminFundedTotal</strong> tak ka KAVI withdraw hoga — users ke deposits safe rahenge.
+        Yeh action <strong>adminFundedTotal ko 0</strong> kar deta hai.
+      </div>
+      <div class="payout-row" style="margin-bottom:1rem;">
+        <span class="label">Withdrawable (adminFundedTotal)</span>
+        <span class="value" id="adm-withdrawable">—</span>
+      </div>
+      <button class="btn" id="emergBtn" onclick="doEmergencyWithdraw()"
+        style="background:transparent; border:1px solid var(--red); color:var(--red); font-family:var(--mono); font-size:13px; font-weight:700; cursor:pointer; padding:13px; border-radius:var(--radius-sm); width:100%; letter-spacing:0.5px;">
+        Emergency Withdraw
+      </button>
+    </div>
+  </div>
+
+</div>
+<div id="toast"></div>
+
+<script>
+const CONTRACT_ADDRESS = "0x015916Ed713396D06ABe1137986CC7d2B8E2eC13";
+const ABI = [
+  "function deposit(uint256 grossAmount, address referrer) external",
+  "function claimMonth(uint256 depositId) external",
+  "function fundRewardPool(uint256 amount) external",
+  "function emergencyWithdraw() external",
+  "function depositCount(address) external view returns (uint256)",
+  "function deposits(address, uint256) external view returns (uint128 netAmount, uint96 priceAtDeposit, uint8 claimedMonths, uint64 nextClaimableAt)",
+  "function getKaviPrice() external view returns (uint256)",
+  "function vaultBalance() external view returns (uint256)",
+  "function adminFundedTotal() external view returns (uint256)",
+  "function daysSinceDeploy() external view returns (uint256)",
+  "function firstClaimDaysIfDepositedNow() external view returns (uint256)",
+  "function getReferralInfo(address) external view returns (address upline, uint256 totalEarned, uint256 totalDeposited, bool isEligible)",
+  "function previewNextClaim(address user, uint256 depositId) external view returns (uint256 grossQty, uint256 grossValue, uint256 grossPayout, uint256 netPayout, bool byValue, bool claimOpen, uint256 secondsToOpen, uint8 monthsLeft)",
+  "function getDeposit(address user, uint256 depositId) external view returns (uint128 netAmount, uint96 priceAtDeposit, uint8 claimedMonths, uint64 nextClaimableAt, uint256 secondsToNext, bool fullyDone)",
+  "function KAVI_TOKEN() external view returns (address)",
+  "function ADMIN() external view returns (address)",
+  "function FEE_WALLET() external view returns (address)",
+  "function DEPLOY_TIME() external view returns (uint256)",
+  "event Deposited(address indexed user, uint256 indexed depositId, address indexed referrer, uint256 netAmount, uint256 feePaid, uint256 referralPaid, uint256 priceAtDeposit, uint256 extraDays, uint64 firstClaimableAt)",
+  "event AdminFunded(uint256 amount, uint256 totalAdminFunded)",
+  "event EmergencyWithdraw(uint256 amount)"
+];
+const ERC20_ABI = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) external view returns (uint256)",
+  "function balanceOf(address) external view returns (uint256)",
+  "function decimals() external view returns (uint8)"
+];
+const BSC_CHAIN_ID = 56;
+
+let provider, signer, contract, kaviToken, userAddress;
+let kaviPrice = 0, depositCount = 0;
+let countdownInterval = null;
+
+// ══ TOAST ══
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 3500);
+}
+
+// ══ TABS ══
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+  if (name === 'claims' && userAddress) loadClaims();
+  if (name === 'referral' && userAddress) loadReferral();
+  if (name === 'admin' && userAddress) loadAdminStats();
+}
+
+// ══ WALLET ══
+async function connectWallet() {
+  if (!window.ethereum) { toast('MetaMask not found. Please install it.', 'error'); return; }
+  try {
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    const network = await provider.getNetwork();
+    if (network.chainId !== BSC_CHAIN_ID) {
+      try {
+        await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+      } catch(e) { toast('Please switch to BNB Smart Chain', 'error'); return; }
+    }
+    signer = provider.getSigner();
+    userAddress = await signer.getAddress();
+    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+    const kaviAddr = await contract.KAVI_TOKEN();
+    kaviToken = new ethers.Contract(kaviAddr, ERC20_ABI, signer);
+
+    const btn = document.getElementById('connectBtn');
+    btn.textContent = userAddress.slice(0,6) + '…' + userAddress.slice(-4);
+    btn.classList.add('connected');
+    document.getElementById('depositBtn').disabled = false;
+    document.getElementById('depositBtn').textContent = 'Approve & Deposit';
+    document.getElementById('maxDepBtn').style.display = '';
+
+    await loadStats();
+    // ── Admin check ──
+    try {
+      const adminAddr = await contract.ADMIN();
+      if (adminAddr.toLowerCase() === userAddress.toLowerCase()) {
+        document.getElementById('adminTab').style.display = '';
+        toast('Admin wallet detected 🔐', 'info');
+      }
+    } catch(e) { console.warn('admin check failed', e); }
+    // check referrer in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    if (ref && ethers.utils.isAddress(ref)) {
+      document.getElementById('referrerAddr').value = ref;
+    }
+    toast('Wallet connected ✓', 'success');
+    window.ethereum.on('accountsChanged', () => location.reload());
+  } catch(e) { toast('Connection failed: ' + (e.message || e), 'error'); }
+}
+
+async function loadStats() {
+  if (!contract) return;
+  try {
+    const [price, vault, refInfo, firstClaimDays, depCount, kaviBal] = await Promise.all([
+      contract.getKaviPrice(),
+      contract.vaultBalance(),
+      contract.getReferralInfo(userAddress),
+      contract.firstClaimDaysIfDepositedNow(),
+      contract.depositCount(userAddress),
+      kaviToken.balanceOf(userAddress)
+    ]);
+    kaviPrice = parseFloat(ethers.utils.formatEther(price));
+    depositCount = depCount.toNumber();
+
+    document.getElementById('kaviPrice').textContent = '$' + kaviPrice.toFixed(6);
+    document.getElementById('headerPrice').textContent = 'KAVI: $' + kaviPrice.toFixed(6);
+    document.getElementById('vaultBal').textContent = formatKavi(vault);
+    document.getElementById('myDeposits').textContent = depositCount + ' deposit' + (depositCount !== 1 ? 's' : '');
+    document.getElementById('refEarned').textContent = formatKavi(refInfo.totalEarned);
+    document.getElementById('myKaviBalance').textContent = formatKavi(kaviBal);
+    document.getElementById('firstClaimDays').textContent = firstClaimDays.toString();
+    updatePreview();
+  } catch(e) { console.error('loadStats', e); }
+}
+
+function formatKavi(bn) {
+  const n = parseFloat(ethers.utils.formatEther(bn));
+  if (n >= 1e6) return (n/1e6).toFixed(2) + 'M KAVI';
+  if (n >= 1e3) return (n/1e3).toFixed(2) + 'K KAVI';
+  return n.toFixed(2) + ' KAVI';
+}
+function formatUSD(kaviAmt) {
+  return '$' + (kaviAmt * kaviPrice).toLocaleString('en-US', {maximumFractionDigits:2});
+}
+
+// ══ PREVIEW ══
+function updatePreview() {
+  const raw = parseFloat(document.getElementById('depositAmt').value);
+  if (!raw || raw <= 0) {
+    document.getElementById('previewEmpty').style.display = '';
+    document.getElementById('previewContent').style.display = 'none';
+    return;
+  }
+  const fee = raw * 0.05;
+  const net = raw - fee * 2;
+  const total = net * 2;
+  const perMonth = total / 40;
+  const perMonthNet = perMonth * 0.95;
+  const usdVal = kaviPrice > 0 ? '$' + (net * kaviPrice * 2).toFixed(2) : '—';
+
+  document.getElementById('previewEmpty').style.display = 'none';
+  document.getElementById('previewContent').style.display = '';
+  document.getElementById('prev-gross').textContent = raw.toFixed(2) + ' KAVI';
+  document.getElementById('prev-fee').textContent = fee.toFixed(2) + ' KAVI';
+  document.getElementById('prev-reffee').textContent = fee.toFixed(2) + ' KAVI';
+  document.getElementById('prev-net').textContent = net.toFixed(2) + ' KAVI';
+  document.getElementById('prev-total').textContent = total.toFixed(2) + ' KAVI';
+  document.getElementById('prev-monthly').textContent = perMonth.toFixed(4) + ' KAVI';
+  document.getElementById('prev-monthlynetsub').textContent = perMonthNet.toFixed(4) + ' KAVI';
+  document.getElementById('prev-usd').textContent = usdVal;
+}
+
+async function setMaxDeposit() {
+  if (!kaviToken || !userAddress) return;
+  try {
+    const bal = await kaviToken.balanceOf(userAddress);
+    const amount = parseFloat(ethers.utils.formatEther(bal));
+    if (amount > 0) {
+      document.getElementById('depositAmt').value = amount.toFixed(4);
+      updatePreview();
+    } else {
+      toast('KAVI balance is 0', 'error');
+    }
+  } catch(e) { toast('Could not fetch balance', 'error'); }
+}
+
+// ══ DEPOSIT ══
+let _depositInProgress = false;
+async function doDeposit() {
+  if (_depositInProgress) { toast('Transaction already in progress…', 'info'); return; }
+  if (!signer) { toast('Connect wallet first', 'error'); return; }
+  const rawAmt = parseFloat(document.getElementById('depositAmt').value);
+  if (!rawAmt || rawAmt <= 0) { toast('Enter a valid amount', 'error'); return; }
+
+  const referrer = document.getElementById('referrerAddr').value.trim() || ethers.constants.AddressZero;
+  if (referrer !== ethers.constants.AddressZero && !ethers.utils.isAddress(referrer)) {
+    toast('Invalid referrer address', 'error'); return;
+  }
+
+  const btn = document.getElementById('depositBtn');
+  const amountWei = ethers.utils.parseEther(rawAmt.toString());
+
+  _depositInProgress = true;
+  btn.disabled = true;
+
+  try {
+    // ── Step 1: Check current allowance ──
+    btn.innerHTML = '<span class="spinner"></span>Checking allowance…';
+    const allowance = await kaviToken.allowance(userAddress, CONTRACT_ADDRESS);
+
+    if (allowance.lt(amountWei)) {
+      // ── Step 2: Reset to 0 first if old allowance exists ──
+      if (allowance.gt(0)) {
+        btn.innerHTML = '<span class="spinner"></span>Resetting allowance…';
+        const nonce0 = await provider.getTransactionCount(userAddress, 'latest');
+        const resetTx = await kaviToken.approve(CONTRACT_ADDRESS, 0, {
+          gasLimit: 60000,
+          nonce: nonce0
+        });
+        toast('Resetting old allowance, please confirm in MetaMask…', 'info');
+        await resetTx.wait();
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      // ── Step 3: Approve exact amount needed ──
+      btn.innerHTML = '<span class="spinner"></span>Approving KAVI…';
+      const nonce1 = await provider.getTransactionCount(userAddress, 'latest');
+      const approveTx = await kaviToken.approve(CONTRACT_ADDRESS, amountWei, {
+        gasLimit: 60000,
+        nonce: nonce1
+      });
+      toast('Approval sent, please confirm in MetaMask…', 'info');
+      await approveTx.wait();
+      toast('Approved ✓', 'success');
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    // ── Step 4: Deposit ──
+    btn.innerHTML = '<span class="spinner"></span>Depositing…';
+    const nonce2 = await provider.getTransactionCount(userAddress, 'latest');
+    const tx = await contract.deposit(amountWei, referrer, { nonce: nonce2 });
+    toast('Transaction sent, confirming…', 'info');
+    await tx.wait();
+    document.getElementById('depositAmt').value = '';
+    updatePreview();
+    try { await loadStats(); } catch(_) {}
+    toast('Deposit successful! 🎉', 'success');
+  } catch(e) {
+    const msg = e?.error?.message || e?.data?.message || e?.reason || e?.message || 'Transaction failed';
+    toast('Error: ' + msg.slice(0, 100), 'error');
+  } finally {
+    _depositInProgress = false;
+    btn.innerHTML = 'Approve & Deposit';
+    btn.disabled = false;
+  }
+}
+
+// ══ CLAIMS ══
+async function loadClaims() {
+  if (!contract || !userAddress) {
+    document.getElementById('claimsWalletPrompt').style.display = '';
+    document.getElementById('claimsList').style.display = 'none';
+    document.getElementById('claimsEmpty').style.display = 'none';
+    return;
+  }
+  document.getElementById('claimsWalletPrompt').style.display = 'none';
+
+  const count = await contract.depositCount(userAddress);
+  const total = count.toNumber();
+  if (total === 0) {
+    document.getElementById('claimsList').style.display = 'none';
+    document.getElementById('claimsEmpty').style.display = '';
+    return;
+  }
+
+  document.getElementById('claimsList').style.display = '';
+  document.getElementById('claimsEmpty').style.display = 'none';
+  document.getElementById('claimsList').innerHTML = '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-bottom:8px;">Loading deposits…</div>';
+
+  const items = [];
+  for (let i = 0; i < total; i++) {
+    try {
+      const [dep, preview] = await Promise.all([
+        contract.getDeposit(userAddress, i),
+        contract.previewNextClaim(userAddress, i).catch(() => null)
+      ]);
+      items.push({ id: i, dep, preview });
+    } catch(e) { console.error('load deposit', i, e); }
+  }
+
+  if (countdownInterval) clearInterval(countdownInterval);
+  document.getElementById('claimsList').innerHTML = items.map(({ id, dep, preview }) => renderDepositCard(id, dep, preview)).join('');
+  countdownInterval = setInterval(updateCountdowns, 1000);
+}
+
+function renderDepositCard(id, dep, preview) {
+  const net = parseFloat(ethers.utils.formatEther(dep.netAmount));
+  const claimedM = dep.claimedMonths;
+  const totalM = 40;
+  const progress = Math.round((claimedM / totalM) * 100);
+  const done = dep.fullyDone;
+  const canClaim = preview && preview.claimOpen;
+  const secsLeft = preview ? preview.secondsToOpen.toNumber() : 0;
+  const monthsLeft = preview ? preview.monthsLeft : (totalM - claimedM);
+  const priceAt = (dep.priceAtDeposit.toNumber ? dep.priceAtDeposit.toNumber() : parseInt(dep.priceAtDeposit)) / 1e18;
+
+  let statusClass = done ? 'status-done' : (canClaim ? 'status-ready' : 'status-active');
+  let statusText = done ? 'Complete' : (canClaim ? 'Claim Ready' : 'Active');
+
+  let claimPrev = '';
+  if (preview && !done) {
+    const gp = parseFloat(ethers.utils.formatEther(preview.grossPayout));
+    const np = parseFloat(ethers.utils.formatEther(preview.netPayout));
+    claimPrev = `
+      <div class="info-box ${preview.byValue ? '' : 'teal'}" style="margin-bottom:1rem;font-size:11px;">
+        ${preview.byValue ? '📉 Price rose — value-based (lower) payout active' : '📊 Fixed quantity payout (price at or below deposit price)'}
+        <br>Gross: ${gp.toFixed(4)} KAVI → Net: ${np.toFixed(4)} KAVI
+        ${kaviPrice > 0 ? ' (~$' + (np * kaviPrice).toFixed(2) + ')' : ''}
+      </div>`;
+  }
+
+  return `
+    <div class="deposit-item" id="deposit-${id}">
+      <div class="deposit-header">
+        <span class="deposit-id">Deposit #${id}</span>
+        <span class="deposit-status ${statusClass}">${statusText}</span>
+      </div>
+      <div class="deposit-grid">
+        <div class="d-stat">
+          <div class="d-stat-label">Net Staked</div>
+          <div class="d-stat-val">${net.toFixed(2)}</div>
+        </div>
+        <div class="d-stat">
+          <div class="d-stat-label">Claimed</div>
+          <div class="d-stat-val">${claimedM} / ${totalM}</div>
+        </div>
+        <div class="d-stat">
+          <div class="d-stat-label">Price at Dep.</div>
+          <div class="d-stat-val">$${priceAt.toFixed(4)}</div>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:${progress}%"></div>
+      </div>
+      ${claimPrev}
+      ${!done ? `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+          <div class="countdown" id="cd-${id}">
+            ${canClaim ? '<span style="color:var(--teal)">✓ Claim window is open!</span>' : `Next claim in: <span>${formatSeconds(secsLeft)}</span>`}
+          </div>
+          <button class="btn btn-outline" style="width:auto; padding:8px 20px;" 
+            onclick="doClaim(${id})" ${canClaim ? '' : 'disabled'} id="claimBtn-${id}">
+            ${canClaim ? 'Claim Now ↗' : 'Not Ready'}
+          </button>
+        </div>
+      ` : '<div style="font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center;padding:8px 0;">All 40 months claimed — deposit complete!</div>'}
+    </div>`;
+}
+
+function updateCountdowns() {
+  document.querySelectorAll('[id^="cd-"]').forEach(el => {
+    const id = el.id.replace('cd-','');
+    const secs = parseInt(el.dataset.secs || '0') - 1;
+    if (isNaN(secs) || secs < 0) return;
+    el.dataset.secs = secs;
+    el.innerHTML = secs <= 0
+      ? '<span style="color:var(--teal)">✓ Claim window is open!</span>'
+      : `Next claim in: <span>${formatSeconds(secs)}</span>`;
+  });
+}
+
+function formatSeconds(s) {
+  const d = Math.floor(s / 86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60);
+  return (d > 0 ? d+'d ' : '') + (h > 0 ? h+'h ' : '') + m+'m';
+}
+
+async function doClaim(depositId) {
+  if (!contract) return;
+  const btn = document.getElementById('claimBtn-' + depositId);
+  btn.disabled = true;
+  btn.textContent = '…';
+  try {
+    const tx = await contract.claimMonth(depositId);
+    toast('Claim sent, confirming…', 'info');
+    await tx.wait();
+    try { await loadClaims(); } catch(_) {}
+    toast('Claim successful! 🎉', 'success');
+  } catch(e) {
+    const msg = e?.error?.message || e?.data?.message || e?.message || 'Claim failed';
+    toast('Error: ' + msg.slice(0,80), 'error');
+    btn.disabled = false;
+    btn.textContent = 'Claim Now ↗';
+  }
+}
+
+// ══ REFERRAL ══
+async function loadReferral() {
+  if (!contract || !userAddress) {
+    document.getElementById('refWalletPrompt').style.display = '';
+    document.getElementById('refContent').style.display = 'none';
+    return;
+  }
+  document.getElementById('refWalletPrompt').style.display = 'none';
+  document.getElementById('refContent').style.display = '';
+
+  const base = window.location.origin + window.location.pathname;
+  document.getElementById('refLinkText').textContent = base + '?ref=' + userAddress;
+
+  try {
+    const info = await contract.getReferralInfo(userAddress);
+    const earned = parseFloat(ethers.utils.formatEther(info.totalEarned));
+    const deposited = parseFloat(ethers.utils.formatEther(info.totalDeposited));
+    document.getElementById('ref-earned').textContent = earned.toFixed(4) + ' KAVI' + (kaviPrice > 0 ? ' (~$' + (earned*kaviPrice).toFixed(2) + ')' : '');
+    document.getElementById('ref-deposited').textContent = deposited.toFixed(2) + ' KAVI';
+    const thresh = 25000;
+    document.getElementById('ref-eligible').innerHTML = info.isEligible
+      ? '<span style="color:var(--teal)">✓ Eligible</span>'
+      : `<span style="color:var(--red)">✗ Need ${(thresh - deposited).toFixed(0)} more KAVI</span>`;
+  } catch(e) { console.error('loadReferral', e); }
+}
+
+function copyRef() {
+  const text = document.getElementById('refLinkText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyRefBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+    toast('Referral link copied!', 'success');
+  });
+}
+
+async function checkRefInfo() {
+  const addr = document.getElementById('checkRefAddr').value.trim();
+  if (!ethers.utils.isAddress(addr)) { toast('Enter a valid address', 'error'); return; }
+  if (!contract) { toast('Connect wallet first', 'error'); return; }
+  try {
+    const info = await contract.getReferralInfo(addr);
+    const earned = parseFloat(ethers.utils.formatEther(info.totalEarned));
+    const deposited = parseFloat(ethers.utils.formatEther(info.totalDeposited));
+    toast(`Earned: ${earned.toFixed(4)} KAVI | Deposited: ${deposited.toFixed(2)} KAVI | Eligible: ${info.isEligible ? 'YES' : 'NO'}`, info.isEligible ? 'success' : 'info');
+  } catch(e) { toast('Lookup failed', 'error'); }
+}
+
+// ══ LOAD PRICE WITHOUT WALLET (read-only) ══
+async function loadReadOnly() {
+  try {
+    const ro = new ethers.providers.JsonRpcProvider('https://bsc-dataseed.binance.org/');
+    const roContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, ro);
+    const [price, vault, firstClaim] = await Promise.all([
+      roContract.getKaviPrice(),
+      roContract.vaultBalance(),
+      roContract.firstClaimDaysIfDepositedNow()
+    ]);
+    kaviPrice = parseFloat(ethers.utils.formatEther(price));
+    document.getElementById('kaviPrice').textContent = '$' + kaviPrice.toFixed(6);
+    document.getElementById('headerPrice').textContent = 'KAVI: $' + kaviPrice.toFixed(6);
+    document.getElementById('vaultBal').textContent = formatKavi(vault);
+    document.getElementById('firstClaimDays').textContent = firstClaim.toString();
+  } catch(e) {
+    document.getElementById('kaviPrice').textContent = '— (connect wallet)';
+    console.warn('read-only price load failed', e);
+  }
+}
+
+loadReadOnly();
+
+// ══ ADMIN ══
+async function loadAdminStats() {
+  if (!contract) return;
+  try {
+    const [vault, funded, price, days, feeWallet, myBal] = await Promise.all([
+      contract.vaultBalance(),
+      contract.adminFundedTotal(),
+      contract.getKaviPrice(),
+      contract.daysSinceDeploy(),
+      contract.FEE_WALLET(),
+      kaviToken.balanceOf(userAddress)
+    ]);
+    const priceF = parseFloat(ethers.utils.formatEther(price));
+    document.getElementById('adm-vaultBal').textContent   = formatKavi(vault) + (priceF > 0 ? ' (~$' + (parseFloat(ethers.utils.formatEther(vault)) * priceF).toFixed(2) + ')' : '');
+    document.getElementById('adm-fundedTotal').textContent = formatKavi(funded);
+    document.getElementById('adm-withdrawable').textContent = formatKavi(funded);
+    document.getElementById('adm-price').textContent      = '$' + priceF.toFixed(6);
+    document.getElementById('adm-days').textContent       = days.toString() + ' days';
+    document.getElementById('adm-feeWallet').textContent  = feeWallet;
+    document.getElementById('adm-myBal').textContent      = formatKavi(myBal);
+  } catch(e) { console.error('loadAdminStats', e); toast('Admin stats load failed', 'error'); }
+}
+
+async function setMaxFund() {
+  if (!kaviToken || !userAddress) return;
+  try {
+    const bal = await kaviToken.balanceOf(userAddress);
+    document.getElementById('fundAmt').value = parseFloat(ethers.utils.formatEther(bal)).toFixed(4);
+  } catch(e) { toast('Balance fetch failed', 'error'); }
+}
+
+let _fundInProgress = false;
+async function doFund() {
+  if (_fundInProgress) { toast('Transaction already in progress…', 'info'); return; }
+  if (!contract || !kaviToken) { toast('Connect wallet first', 'error'); return; }
+  const raw = parseFloat(document.getElementById('fundAmt').value);
+  if (!raw || raw <= 0) { toast('Enter a valid amount', 'error'); return; }
+
+  const btn = document.getElementById('fundBtn');
+  const amountWei = ethers.utils.parseEther(raw.toString());
+  _fundInProgress = true;
+  btn.disabled = true;
+
+  try {
+    btn.innerHTML = '<span class="spinner"></span>Checking allowance…';
+    const allowance = await kaviToken.allowance(userAddress, CONTRACT_ADDRESS);
+
+    if (allowance.lt(amountWei)) {
+      if (allowance.gt(0)) {
+        // Reset to 0 first — fetch fresh nonce from network
+        btn.innerHTML = '<span class="spinner"></span>Resetting allowance…';
+        const nonce0 = await provider.getTransactionCount(userAddress, 'latest');
+        const resetTx = await kaviToken.approve(CONTRACT_ADDRESS, 0, {
+          gasLimit: 60000,
+          nonce: nonce0
+        });
+        toast('Resetting old allowance, please confirm in MetaMask…', 'info');
+        await resetTx.wait();
+        // Small delay so MetaMask clears pending state
+        await new Promise(r => setTimeout(r, 500));
+      }
+
+      // Fetch fresh nonce after reset (or directly if allowance was 0)
+      btn.innerHTML = '<span class="spinner"></span>Approving KAVI…';
+      const nonce1 = await provider.getTransactionCount(userAddress, 'latest');
+      const approveTx = await kaviToken.approve(CONTRACT_ADDRESS, amountWei, {
+        gasLimit: 60000,
+        nonce: nonce1
+      });
+      toast('Approval sent, please confirm in MetaMask…', 'info');
+      await approveTx.wait();
+      toast('Approved ✓', 'success');
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    btn.innerHTML = '<span class="spinner"></span>Funding pool…';
+    const nonce2 = await provider.getTransactionCount(userAddress, 'latest');
+    const tx = await contract.fundRewardPool(amountWei, { nonce: nonce2 });
+    toast('Transaction sent, confirming…', 'info');
+    await tx.wait();
+    document.getElementById('fundAmt').value = '';
+    try { await loadAdminStats(); } catch(_) {}
+    try { await loadStats(); } catch(_) {}
+    toast('Reward pool funded successfully! ✅', 'success');
+  } catch(e) {
+    const msg = e?.error?.message || e?.data?.message || e?.reason || e?.message || 'Transaction failed';
+    toast('Error: ' + msg.slice(0, 100), 'error');
+  } finally {
+    _fundInProgress = false;
+    btn.disabled = false;
+    btn.innerHTML = 'Approve & Fund Pool';
+  }
+}
+
+async function doEmergencyWithdraw() {
+  if (!contract) { toast('Connect wallet first', 'error'); return; }
+
+  const withdrawable = document.getElementById('adm-withdrawable').textContent;
+  const confirmed = window.confirm(
+    `⚠️ Emergency Withdraw\n\nWithdrawable amount: ${withdrawable}\n\nYeh action adminFundedTotal ko 0 kar dega.\nKya aap sure hain?`
+  );
+  if (!confirmed) return;
+
+  const btn = document.getElementById('emergBtn');
+  btn.disabled = true;
+  btn.textContent = '…Withdrawing';
+
+  try {
+    const tx = await contract.emergencyWithdraw();
+    toast('Withdraw transaction sent…', 'info');
+    await tx.wait();
+    toast('Emergency withdraw successful ✅', 'success');
+    await loadAdminStats();
+    await loadStats();
+  } catch(e) {
+    const msg = e?.error?.message || e?.data?.message || e?.reason || e?.message || 'Withdraw failed';
+    toast('Error: ' + msg.slice(0, 100), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Emergency Withdraw';
+  }
+}
+</script>
+</body>
+</html>
